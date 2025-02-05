@@ -235,7 +235,7 @@ void DisconnectClient(ScriptContext& scriptContext)
         return;
     }
 
-    globals::engineServer2->DisconnectClient(slot, disconnectReason);
+    globals::engineServer2->DisconnectClient(slot, disconnectReason, "");
 }
 
 REGISTER_NATIVES(engine, {
