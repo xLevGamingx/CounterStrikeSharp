@@ -26,6 +26,10 @@ jobs:
         uses: onyxmueller/build-tag-number@v1
         with:
           token: ${{secrets.github_token}}
+          
+      - name: Set entitykv build number
+        if: ${{ github.ref == 'refs/heads/entitykv' }}
+        run: echo "BUILD_NUMBER=500" >> $GITHUB_ENV
 
   build_windows:
     needs: setup
@@ -36,13 +40,17 @@ jobs:
         run: echo "GITHUB_SHA_SHORT=${GITHUB_SHA::7}" >> $GITHUB_ENV
 
       - name: Fallback build number
-        if: ${{ github.event_name == 'pull_request' || github.ref != 'refs/heads/main' }}
+        if: ${{ github.event_name == 'pull_request' || (github.ref != 'refs/heads/main' && github.ref != 'refs/heads/entitykv') }}
         shell: bash
         run: echo "BUILD_NUMBER=0" >> $GITHUB_ENV
 
       - name: Main build number
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         run: echo "BUILD_NUMBER=${{ needs.setup.outputs.buildnumber }}" >> $GITHUB_ENV
+
+      - name: Entitykv build number
+        if: ${{ github.ref == 'refs/heads/entitykv' }}
+        run: echo "Entitykv branch BUILD_NUMBER=${{ env.BUILD_NUMBER }}"
 
       - name: Visual Studio environment
         shell: cmd
@@ -57,7 +65,7 @@ jobs:
             echo>>"%GITHUB_ENV%" %%a=%%b
           )
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
         with:
           submodules: "recursive"
 
@@ -75,7 +83,7 @@ jobs:
           mkdir build/output/
           mv build/addons build/output
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v3
         with:
           name: counterstrikesharp-build-windows-${{ env.GITHUB_SHA_SHORT }}
           path: build/output/
@@ -92,7 +100,7 @@ jobs:
         run: echo "GITHUB_SHA_SHORT=${GITHUB_SHA::7}" >> $GITHUB_ENV
 
       - name: Fallback build number
-        if: ${{ github.event_name == 'pull_request' || github.ref != 'refs/heads/main' }}
+        if: ${{ github.event_name == 'pull_request' || (github.ref != 'refs/heads/main' && github.ref != 'refs/heads/entitykv') }}
         shell: bash
         run: echo "BUILD_NUMBER=0" >> $GITHUB_ENV
 
@@ -100,7 +108,11 @@ jobs:
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         run: echo "BUILD_NUMBER=${{ needs.setup.outputs.buildnumber }}" >> $GITHUB_ENV
 
-      - uses: actions/checkout@v4
+      - name: Entitykv build number
+        if: ${{ github.ref == 'refs/heads/entitykv' }}
+        run: echo "Entitykv branch BUILD_NUMBER=${{ env.BUILD_NUMBER }}"
+
+      - uses: actions/checkout@v3
         with:
           submodules: "recursive"
 
@@ -116,7 +128,7 @@ jobs:
           mkdir build/output/
           mv build/addons build/output
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v3
         with:
           name: counterstrikesharp-build-linux-${{ env.GITHUB_SHA_SHORT }}
           path: build/output/
@@ -141,10 +153,10 @@ jobs:
         run: echo "BUILD_NUMBER=${{ needs.setup.outputs.buildnumber }}" >> $GITHUB_ENV
 
       # We don't need expensive submodules for the managed side.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
       - name: Build runtime v${{ env.BUILD_NUMBER }}
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: "8.0.x"
 
@@ -155,7 +167,7 @@ jobs:
         run: dotnet test --logger trx --results-directory "TestResults-${{ env.GITHUB_SHA_SHORT }}" managed/CounterStrikeSharp.API.Tests/CounterStrikeSharp.API.Tests.csproj
 
       - name: Upload dotnet test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: test-results-${{ env.GITHUB_SHA_SHORT }}
           path: TestResults-${{ env.GITHUB_SHA_SHORT }}
@@ -166,7 +178,7 @@ jobs:
           dotnet publish -c Release /p:Version=1.0.${{ env.BUILD_NUMBER }} managed/CounterStrikeSharp.API
           dotnet pack -c Release /p:Version=1.0.${{ env.BUILD_NUMBER }} managed/CounterStrikeSharp.API
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v3
         with:
           name: counterstrikesharp-build-api-${{ env.GITHUB_SHA_SHORT }}
           path: managed/CounterStrikeSharp.API/bin/Release
@@ -182,17 +194,17 @@ jobs:
         shell: bash
         run: echo "GITHUB_SHA_SHORT=${GITHUB_SHA::7}" >> $GITHUB_ENV
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v3
         with:
           name: counterstrikesharp-build-windows-${{ env.GITHUB_SHA_SHORT }}
           path: build/windows
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v3
         with:
           name: counterstrikesharp-build-linux-${{ env.GITHUB_SHA_SHORT }}
           path: build/linux
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v3
         with:
           name: counterstrikesharp-build-api-${{ env.GITHUB_SHA_SHORT }}
           path: build/api
